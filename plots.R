@@ -12,9 +12,9 @@ head(df2)
 ggplot(data = df1[-91,], aes(x = betas, y = result_polska)) +
   geom_point() +
   geom_hline(yintercept = df1[91, 2], color = "red") +
-  labs(title = "Średnia znaleziona optymalna wartość funkcji dla K = 10 w zależności od temperatury",
+  labs(title = "Średnia znaleziona optymalna wartość funkcji dla K = 10 w zależności od Beta",
        subtitle = "Dane: województwa, Polska",
-       x = "Temperatura (Beta)",
+       x = "Współczynnik Beta",
        y = "Wartość funkcji")
 
 # Wykres 2
