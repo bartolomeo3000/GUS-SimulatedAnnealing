@@ -18,8 +18,22 @@ ggplot(data = df1[-91,], aes(x = betas, y = result_polska)) +
        y = "Wartość funkcji")
 
 # Wykres 2
+ggplot(data = df1[-91,], aes(x = betas, y = result_niemcy)) +
+  geom_point() +
+  geom_hline(yintercept = df1[91, 3], color = "red") +
+  labs(title = "Średnia znaleziona optymalna wartość funkcji dla K = 10 w zależności od Beta",
+       subtitle = "Dane: landy, Niemcy",
+       x = "Współczynnik Beta",
+       y = "Wartość funkcji")
 
 # Wykres 3
+ggplot(data = df1[-91,], aes(x = betas, y = result_usa)) +
+  geom_point() +
+  geom_hline(yintercept = df1[91, 4], color = "red") +
+  labs(title = "Średnia znaleziona optymalna wartość funkcji dla K = 10 w zależności od Beta",
+       subtitle = "Dane: stany, USA",
+       x = "Współczynnik Beta",
+       y = "Wartość funkcji")
 
 # Wykres 4
 ggplot(data = df2[-49,], aes(x = Ks, y = result_polska)) +
