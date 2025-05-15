@@ -57,7 +57,7 @@ generate_state_0 <- function(m, M, n, H){
   x
 }
 
-SA <- function(A, m, M, n, beta = 0.95){
+SA <- function(A, m, M, n, beta = 0.95, K = 100){
   H <- length(A)
   t <- 1
   
@@ -73,7 +73,6 @@ SA <- function(A, m, M, n, beta = 0.95){
   f_prev <- f(A, x)
   
   k <- 0 # Licznik pozostawania w tym samym stanie
-  K <- 100
   
   while (k < K){
     while (TRUE){
@@ -117,12 +116,3 @@ SA <- function(A, m, M, n, beta = 0.95){
   }
   x
 }
-
-x0 <- SA(df$A, df$m, df$M, 1000)
-f(df$A, x0)
-
-x1 <- generate_state_0(df$m, df$M, 1000, 16)
-f(df$A, x1)
-
-xrna <- rnabox(1000, df$A, df$M, df$m)
-f(df$A, xrna)
