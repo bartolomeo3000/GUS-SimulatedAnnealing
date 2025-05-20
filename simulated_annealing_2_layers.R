@@ -65,7 +65,7 @@ generate_state_0 <- function(m_ch, M, n_ch, N, H){
       s <- sample(1:H, 1, prob=M) # wagi jak proporcje w M
       if(m[s]<M[s]){m[s] <- m[s]+1; m_tmp <- m_tmp-1}
     }
-    if(floor(sum((m/M)*gora)) > n_ch){break}
+    if(sum((m/M)*gora)>=n_ch){break}
   }
   while(sum((m/M)*gora)-n_ch>0){
     s <- sample(1:H, 1)
