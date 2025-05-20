@@ -9,13 +9,13 @@ f <- function(M, N, D, S, l, m, n){
   b
 }
 
-check <- function(totm, totn, m, n, M){
+check <- function(totm, totn, m, n, M, eps=1){
   sumn <- 0
   for(h in 1:length(m)){
     sumn <- sumn+sum(n[[h]])*m[h]/M[h]
   }
-  if(sum(m)==totm & sumn<totn+1 & sumn>totn-1){return(TRUE)}
-  return(FALSE)
+  if(sum(m)==totm & sumn<totn+eps & sumn>totn-eps){return(c(TRUE,sumn-totn))}
+  return(c(FALSE, sumn-totn))
 }
 
 generate_test_data <- function(H = 5, sumM = 50, pop = 10000, minN = 10){
@@ -54,36 +54,34 @@ D <- a[[3]]
 S <- a[[4]]
 
 generate_state_0 <- function(m_ch, M, n_ch, N, H){
+  gora <- rep(0, H)
+  for(i in 1:H){
+    gora[i] <- sum(N[[i]])
+  }
   while(TRUE){
-    m_tmp <- m_ch
-    m <- rep(0,H)
+    m_tmp <- m_ch-H
+    m <- rep(1,H)
     while(m_tmp>0){
       s <- sample(1:H, 1, prob=M) # wagi jak proporcje w M
       if(m[s]<M[s]){m[s] <- m[s]+1; m_tmp <- m_tmp-1}
     }
-    dol <- rep(0, H)
-    gora <- rep(0, H)
-    for(i in 1:H){
-      dol[i] <- sum(sort(N[[i]])[1:m[i]])
-      gora[i] <- sum(sort(N[[i]], decreasing=T)[1:m[i]])
-    }
-    if(floor(sum((m/M)*dol)) < n_ch & floor(sum((m/M)*gora)) > n_ch){break}
+    if(floor(sum((m/M)*gora)) > n_ch){break}
   }
   while(sum((m/M)*gora)-n_ch>0){
     s <- sample(1:H, 1)
-    if(gora[s]-1>=dol[s]){gora[s] <- gora[s]-1}
+    if(gora[s]-1>=length(N[[s]])){gora[s] <- gora[s]-1}
   }
   n <- list()
   for (i in 1:H){
-    n[[i]] <- rep(0, M[i])
+    n[[i]] <- rep(1, M[i])
+    gora[i] <- gora[i]-sum(n[[i]])
   }
   for(i in 1:H){
     while(TRUE){
-      s <- sample(1:length(N[[i]]), m[i])
-      if(sum(N[[i]][s])>=gora[i]){
+      if(sum(N[[i]])>=gora[i]){
         g <- gora[i]
         while(g>0){
-          c <- sample(s, 1) # możemy wylosować szkołę z której nie weźmiemy uczniów, ale zakładam że o to chodzi w zadaniu
+          c <- sample(M[i], 1)
           if(n[[i]][c]+1<=N[[i]][c]){
             n[[i]][c] <- n[[i]][c]+1
             g <- g-1
@@ -102,4 +100,4 @@ n <- b[[2]]
 
 f(M, N, D, S, 500, m, n)
 check(25,5000,m,n,M)
-sum(unlist(n))
+unlist(n)-unlist(N)
