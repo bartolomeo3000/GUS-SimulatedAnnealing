@@ -55,7 +55,7 @@ generate_test_data <- function(H = 5, sumM = 50, pop = 10000, minN = 10){
   }
   return(list(M, N, D, S))
 }
-a <- generate_test_data()
+a <- generate_test_data(H=10, sumM=200, pop=50000)
 M <- a[[1]]
 N <- a[[2]]
 D <- a[[3]]
@@ -101,7 +101,7 @@ generate_state_0 <- function(m_ch, M, n_ch, N, H){
   return(list(m,n))
 }
 # TEST generate state_0
-b <- generate_state_0(25,M,2000,N,5)
+b <- generate_state_0(100,M,20000,N,10)
 m <- b[[1]]
 n <- b[[2]]
 f(M, N, D, S, m, n)
@@ -109,10 +109,12 @@ check(25,2000,m,n,M)
 unlist(n)-unlist(N)
 # -------------------
 
-SA <- function(D, S, M, N, totm, n_exp, beta = 0.7, K = 10, p=0.2){
+SA <- function(D, S, M, N, totm, n_exp, alpha = 0.05, beta = 0.95, K = 10, p=0.2){
+  eps <- alpha * n_exp
   H <- length(M)
   t <- 1
-
+  
+  # Generujemy stan startowy
   x <- generate_state_0(totm, M, n_exp, N, H)
   m <- x[[1]]
   n <- x[[2]]
@@ -126,7 +128,7 @@ SA <- function(D, S, M, N, totm, n_exp, beta = 0.7, K = 10, p=0.2){
     change_m <- runif(1)<p # TRUE - szkola lub FALSE - uczen
     if(change_m){ # przerzucamy szkole
       while(TRUE){
-        print("szukam legitnego stanu (wariant ze szkolami)") #################
+        # print("szukam legitnego stanu (wariant ze szkolami)") #################
         w <- sample(1:H, 2)
         # sprawdzamy, czy mozna odjac szkole
         if (m[w[1]] - 1 < 1){
@@ -136,21 +138,21 @@ SA <- function(D, S, M, N, totm, n_exp, beta = 0.7, K = 10, p=0.2){
         if (m[w[2]] + 1 > M[w[2]]){ 
           next
         }
+        m[w[1]] <- m[w[1]] - 1
+        m[w[2]] <- m[w[2]] + 1
         # sprawdzamy, czy warunek 2 spelniony
-        if (!check2(n_exp, m, n, M, eps = 200)){
-          print("check2 failed") #################
+        if (!check2(n_exp, m, n, M, eps = eps)){
+          # print("check2 failed - szkoly") #################
+          m[w[1]] <- m[w[1]] + 1
+          m[w[2]] <- m[w[2]] - 1
           next
         }
         break
       }
-      # Jesli przeszlismy przez powyzsza petle, to proponowany stan jest legitny
-      # Chwilowo przechodzimy do niego
-      m[w[1]] <- m[w[1]] - 1
-      m[w[2]] <- m[w[2]] + 1
     }
     else{ # przerzucamy ucznia
       while(TRUE){
-        print("szukam legitnego stanu (wariant z uczniami)") #################
+        # print("szukam legitnego stanu (wariant z uczniami)") #################
         # losujemy dwa wojewodztwa
         w <- sample(1:H, 2)
         # losujemy szkole z wojewodztwa w[1] i szkole z wojewodztwa w[2]
@@ -164,17 +166,17 @@ SA <- function(D, S, M, N, totm, n_exp, beta = 0.7, K = 10, p=0.2){
         if (n[[w[2]]][s2] + 1 > N[[w[2]]][s2]){ 
           next
         }
+        n[[w[1]]][s1] <- n[[w[1]]][s1] - 1
+        n[[w[2]]][s2] <- n[[w[2]]][s2] + 1
         # sprawdzamy, czy warunek 2 spelniony
-        if (!check2(n_exp, m, n, M, eps = 200)){
-          print("check2 failed") #################
+        if (!check2(n_exp, m, n, M, eps = eps)){
+          # print("check2 failed - uczniowie") #################
+          n[[w[1]]][s1] <- n[[w[1]]][s1] + 1
+          n[[w[2]]][s2] <- n[[w[2]]][s2] - 1
           next
         }
         break
       }
-      # Jesli przeszlismy przez powyzsza petle, to proponowany stan jest legitny
-      # Chwilowo przechodzimy do niego
-      n[[w[1]]][s1] <- n[[w[1]]][s1] - 1
-      n[[w[2]]][s2] <- n[[w[2]]][s2] + 1
     }
     # W tym momencie mamy już zaproponowany legitny nowy stan
     # Obliczamy nowa wartosc funkcji celu
@@ -185,14 +187,18 @@ SA <- function(D, S, M, N, totm, n_exp, beta = 0.7, K = 10, p=0.2){
     if (delta < 0){
       f_prev <- f_next
       k <- 0
-      print("ujemna delta") ###############
+      # print("ujemna delta") ###############
     }
-    # Jesli roznica jest dodatnia, to akceptujemy nowy stan z pewnym prawdopodobienstwem
+    # Jesli roznica jest nieujemna, to akceptujemy nowy stan z pewnym prawdopodobienstwem
     else{
       prob <- exp(-delta / t)
       if (runif(1) < prob){
         f_prev <- f_next
-        k <- 0
+        if(delta == 0){
+          k <- k+1
+          # print("Przechodze do innego stanu z tym samym f") ##############
+          }
+        else{k <- 0}
       }
       # Jesli nie zaakceptowalismy nowego stanu, to wracamy do poprzedniego
       else{
@@ -205,26 +211,28 @@ SA <- function(D, S, M, N, totm, n_exp, beta = 0.7, K = 10, p=0.2){
           n[[w[2]]][s2] <- n[[w[2]]][s2] - 1
         }
         k <- k + 1 # zostalismy w tym samym stanie, wiec zwiekszamy licznik k
+        # print("Zostaje w tym samym stanie") ################
       }
     }
     t <- t * beta # po wykonaniu każdego kroku zmniejszamy temperature
     # print("temperaturka:")
     # print(t)
-    print("k:")
-    print(k)
-    print("m:")
-    print(m)
-    print("n:")
-    print(n)
+    # print("k:")
+    # print(k)
+    # print(f(M, N, D, S, m, n))
+    # print("m:")
+    # print(m)
+    # print("n:")
+    # print(n)
   }
   return(list(m,n))
 }
 
 # TEST SA
-sa_result <- SA(D, S, M, N, 25, 2000)
+sa_result <- SA(D, S, M, N, 100, 20000, K=1000, beta=0.999, alpha = 0.05)
 m <- sa_result[[1]]
 n <- sa_result[[2]]
 f(M, N, D, S, m, n)
-check(25,2000,m,n,M)
+check(100,20000,m,n,M, eps=0.05*20000)
 
 
