@@ -48,14 +48,14 @@ generate_test_data <- function(H = 5, sumM = 50, pop = 10000, minN = 10){
       l <- l + 1
     }
   }
-  D <- runif(H, 50, 200)
+  D <- runif(H, 100, 200)
   S <- list()
   for (i in 1:H){
-    S[[i]] <- runif(M[i], 0.2, 2)
+    S[[i]] <- runif(M[i], 0.5, 2)
   }
   return(list(M, N, D, S))
 }
-a <- generate_test_data(H=5, sumM=140, pop=38000)
+a <- generate_test_data(H=5, sumM=1400, pop=500000)
 M <- a[[1]]
 N <- a[[2]]
 D <- a[[3]]
@@ -249,7 +249,7 @@ NieWes <- function(D, S, M, N, totm, n_exp){
     }
   }
   suma <- 0
-  for(j in 1:M[h]){
+  for(h in 1:length(n)){
     suma <- suma + sum(n[[h]])
   }
   for(h in 1:length(M)){
@@ -259,7 +259,7 @@ NieWes <- function(D, S, M, N, totm, n_exp){
 }
 
 # TEST SA
-totm <- 10 # ile szkol
+totm <- 100 # ile szkol
 n_exp <- 2000 # ile uczniow
 beta <- 0.999 # wspolczynnik schladzania
 alpha = 0.05 # wspolczynnik dopuszczalnego odchylenia w warunku 2 (alpha*n_exp)
@@ -275,13 +275,13 @@ NieWes_result <- NieWes(D, S, M, N, totm, n_exp)
 m_NieWes <- NieWes_result[[1]]
 n_NieWes <- NieWes_result[[2]]
 f(M, N, D, S, m_NieWes, n_NieWes)
+check(totm,n_exp,m_NieWes,n_NieWes,M)
 # blad
 f(M, N, D, S, m_NieWes, n_NieWes) - f(M, N, D, S, m, n)
 # blad wzgledny
 (f(M, N, D, S, m_NieWes, n_NieWes) - f(M, N, D, S, m, n)) / f(M, N, D, S, m_NieWes, n_NieWes)
-check(totm,n_exp,m_NieWes,n_NieWes,M)
 
-all(unlist(N) - unlist(n_NieWes) > 0) # sprawdzamy, czy nie przekroczylismy liczby uczniow w szkole
+all(unlist(N) > unlist(n_NieWes)) # sprawdzamy, czy nie przekroczylismy liczby uczniow w szkole
 unlist(n_NieWes) - unlist(n)
 
 # uruchamiamy funkcje SA w petli wiele razy i zapamietujemy najlepszy wynik
@@ -290,6 +290,7 @@ L <- 10
 min_f <- Inf
 best_result <- NULL
 for(i in 1:L){
+  print(i)
   sa_result <- SA(D, S, M, N, totm=totm, n_exp=n_exp, K=1000, beta=beta, alpha = alpha)
   m <- sa_result[[1]]
   n <- sa_result[[2]]
@@ -298,13 +299,21 @@ for(i in 1:L){
     best_result <- sa_result
   }
 }
-min_f
 m_best <- best_result[[1]]
 n_best <- best_result[[2]]
-
-check(totm,n_exp,m_best,n_best,M, eps=alpha*n_exp)
+min_f
+f(M, N, D, S, m_NieWes, n_NieWes)
+f(M, N, D, S, m_NieWes, n_NieWes) - f(M,N,D,S,m_best,n_best)
+(f(M, N, D, S, m_NieWes, n_NieWes) - f(M,N,D,S,m_best,n_best)) / f(M, N, D, S, m_NieWes, n_NieWes)
+check(totm, n_exp, m_best, n_best, M, eps=alpha*n_exp)
 
 check(totm, n_exp, m_NieWes, n_NieWes, M, eps=alpha*n_exp)
-  
 
+sum(abs(unlist(n_NieWes) - unlist(n_best))) / 2 # o tyle kroków alg są oddalone
 
+# sprawdzenie wpływu n na funkcję celu
+f(M, N, D, S, m_NieWes, n_NieWes)
+f(M, N, D, S, m_best, n_NieWes)
+f(M, N, D, S, m_best, n_best)
+
+f(M, N, D, S, m_NieWes, n_best)
