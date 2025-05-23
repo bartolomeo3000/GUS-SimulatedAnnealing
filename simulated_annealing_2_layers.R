@@ -30,7 +30,7 @@ generate_test_data <- function(H = 5, sumM = 50, pop = 10000, minN = 10){
   M <- rep(1, H)
   sumM <- sumM - H
   for (i in 1:sumM){
-    s <- sample(1:5, 1)
+    s <- sample(1:H, 1)
     M[s] <- M[s] + 1
   }
   N <- list()
@@ -48,14 +48,14 @@ generate_test_data <- function(H = 5, sumM = 50, pop = 10000, minN = 10){
       l <- l + 1
     }
   }
-  D <- runif(H, 1, 10)
+  D <- runif(H, 50, 200)
   S <- list()
   for (i in 1:H){
-    S[[i]] <- runif(M[i], 1, 10)
+    S[[i]] <- runif(M[i], 0.2, 2)
   }
   return(list(M, N, D, S))
 }
-a <- generate_test_data(H=10, sumM=200, pop=50000)
+a <- generate_test_data(H=5, sumM=140, pop=38000)
 M <- a[[1]]
 N <- a[[2]]
 D <- a[[3]]
@@ -101,11 +101,11 @@ generate_state_0 <- function(m_ch, M, n_ch, N, H){
   return(list(m,n))
 }
 # TEST generate state_0
-b <- generate_state_0(100,M,20000,N,10)
+b <- generate_state_0(10,M,2000,N,length(M))
 m <- b[[1]]
 n <- b[[2]]
 f(M, N, D, S, m, n)
-check(25,2000,m,n,M)
+check(10,2000,m,n,M)
 unlist(n)-unlist(N)
 # -------------------
 
@@ -228,11 +228,83 @@ SA <- function(D, S, M, N, totm, n_exp, alpha = 0.05, beta = 0.95, K = 10, p=0.2
   return(list(m,n))
 }
 
+
+NieWes <- function(D, S, M, N, totm, n_exp){
+  g <- M*D^2
+  for(h in 1:length(M)){
+    g[h] <- g[h] - sum(N[[h]]*S[[h]]^2)
+  }
+  
+  m <- rep(0, length(M))
+  for(h in 1:length(M)){
+    m[h] <- sqrt(M[h] * g[h])
+  }
+  m <- m / sum(m) * totm
+  
+  n <- list()
+  for(h in 1:length(M)){
+    n[[h]] <- rep(0, M[h])
+    for(j in 1:M[h]){
+      n[[h]][j] <- N[[h]][j] * S[[h]][j]
+    }
+  }
+  suma <- 0
+  for(j in 1:M[h]){
+    suma <- suma + sum(n[[h]])
+  }
+  for(h in 1:length(M)){
+    n[[h]] <- n[[h]] * n_exp * M[h] / m[h] / suma
+  }
+  return(list(m,n))
+}
+
 # TEST SA
-sa_result <- SA(D, S, M, N, 100, 20000, K=1000, beta=0.999, alpha = 0.05)
+totm <- 10 # ile szkol
+n_exp <- 2000 # ile uczniow
+beta <- 0.999 # wspolczynnik schladzania
+alpha = 0.05 # wspolczynnik dopuszczalnego odchylenia w warunku 2 (alpha*n_exp)
+
+sa_result <- SA(D, S, M, N, totm=totm, n_exp=n_exp, K=1000, beta=beta, alpha = alpha)
 m <- sa_result[[1]]
 n <- sa_result[[2]]
 f(M, N, D, S, m, n)
-check(100,20000,m,n,M, eps=0.05*20000)
+check(totm,n_exp,m,n,M, eps=alpha*n_exp)
+
+# TEST NieWes
+NieWes_result <- NieWes(D, S, M, N, totm, n_exp)
+m_NieWes <- NieWes_result[[1]]
+n_NieWes <- NieWes_result[[2]]
+f(M, N, D, S, m_NieWes, n_NieWes)
+# blad
+f(M, N, D, S, m_NieWes, n_NieWes) - f(M, N, D, S, m, n)
+# blad wzgledny
+(f(M, N, D, S, m_NieWes, n_NieWes) - f(M, N, D, S, m, n)) / f(M, N, D, S, m_NieWes, n_NieWes)
+check(totm,n_exp,m_NieWes,n_NieWes,M)
+
+all(unlist(N) - unlist(n_NieWes) > 0) # sprawdzamy, czy nie przekroczylismy liczby uczniow w szkole
+unlist(n_NieWes) - unlist(n)
+
+# uruchamiamy funkcje SA w petli wiele razy i zapamietujemy najlepszy wynik
+# czyli najmniejsza wartosc funkcji celu
+L <- 10
+min_f <- Inf
+best_result <- NULL
+for(i in 1:L){
+  sa_result <- SA(D, S, M, N, totm=totm, n_exp=n_exp, K=1000, beta=beta, alpha = alpha)
+  m <- sa_result[[1]]
+  n <- sa_result[[2]]
+  if(f(M, N, D, S, m, n) < min_f){
+    min_f <- f(M, N, D, S, m, n)
+    best_result <- sa_result
+  }
+}
+min_f
+m_best <- best_result[[1]]
+n_best <- best_result[[2]]
+
+check(totm,n_exp,m_best,n_best,M, eps=alpha*n_exp)
+
+check(totm, n_exp, m_NieWes, n_NieWes, M, eps=alpha*n_exp)
+  
 
 
